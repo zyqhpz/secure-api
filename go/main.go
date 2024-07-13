@@ -96,20 +96,8 @@ func main() {
 		}
 
 		users = append(users, userdata)
-
-		file, err := OpenDataFile()
-		if err != nil {
-			return c.String(http.StatusBadRequest, err.Error())
-		}
-
-		defer file.Close()
-
-		jsonUsers, err := json.Marshal(users)
-		if err != nil {
-			return c.String(http.StatusBadRequest, err.Error())
-		}
-
-		_, err = file.WriteAt(jsonUsers, 0)
+		
+		err = SaveDataToFile(users)
 		if err != nil {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
@@ -187,25 +175,24 @@ func CheckDataFile() (*os.File, error) {
 	return file, nil
 }
 
-func OpenDataFile() (*os.File, error) {
-	file, err := os.OpenFile(DATA_FILE, os.O_RDWR, 0644)
+func SaveDataToFile(users []User) error {
+	file, err := os.OpenFile(DATA_FILE, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	defer file.Close()
 
-	stat, err := file.Stat()
+	jsonUsers, err := json.MarshalIndent(users, "", "    ")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if stat.Size() == 0 {
-		_, err = file.WriteAt([]byte("[]"), 0)
-		if err != nil {
-			return nil, err
-		}
+	_, err = file.Write(jsonUsers)
+	if err != nil {
+		return err
 	}
-
-	return file, nil
+	
+	return nil
 }
 
 func (cv *CustomValidator) Validate(i interface{}) error {
