@@ -8,13 +8,12 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"time"
 
 	"github.com/go-playground/validator"
-	"golang.org/x/crypto/bcrypt"
-
-	"github.com/golang-jwt/jwt"
+	"github.com/gorilla/sessions"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -38,6 +37,8 @@ const DATA_FILE = "data.json"
 func main() {
 	e := echo.New()
 	e.Validator = &CustomValidator{validator: validator.New()}
+
+	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 
 	_, err := CheckDataFile()
 	if err != nil {
@@ -96,7 +97,7 @@ func main() {
 		}
 
 		users = append(users, userdata)
-		
+
 		err = SaveDataToFile(users)
 		if err != nil {
 			return c.String(http.StatusBadRequest, err.Error())
@@ -128,25 +129,66 @@ func main() {
 					return c.String(http.StatusBadRequest, "Password is wrong")
 				}
 
-				// create login auth token
-				token := jwt.New(jwt.SigningMethodHS256)
-				claims := token.Claims.(jwt.MapClaims)
-				claims["name"] = user.Username
-				claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
-
-				t, err := token.SignedString([]byte("secret"))
+				sess, err := session.Get("session", c)
 				if err != nil {
-					return c.String(http.StatusBadRequest, err.Error())
+					return err
+				}
+				sess.Options = &sessions.Options{
+					Path:     "/",
+					MaxAge:   86400 * 7,
+					HttpOnly: true,
+				}
+				sess.Values["username"] = user.Username
+				if err := sess.Save(c.Request(), c.Response()); err != nil {
+					return err
 				}
 
 				log.Println("User: ", user.Username, " is logged in successfully")
 
-				// return token
-				return c.String(http.StatusOK, t)
+				return c.String(http.StatusOK, "User: "+user.Username+" is logged in successfully")
 			}
 		}
 
 		return c.String(http.StatusBadRequest, "Username is not exist")
+	})
+
+	e.POST("/logout", func(c echo.Context) error {
+		sess, err := session.Get("session", c)
+		if err != nil {
+			return err
+		}
+
+		sess.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: true,
+		}
+
+		if err := sess.Save(c.Request(), c.Response()); err != nil {
+			return err
+		}
+
+		return c.String(http.StatusOK, "Logout successfully")
+	})
+
+	// define route to get all users (protected by session)
+	e.GET("/users", func(c echo.Context) error {
+		sess, err := session.Get("session", c)
+		if err != nil {
+			return err
+		}
+
+		username := sess.Values["username"]
+		if username == nil {
+			return c.String(http.StatusBadRequest, "Unauthorized")
+		}
+
+		var usersData []User
+		for i := 0; i < len(users); i++ {
+			usersData = append(usersData, User{Username: users[i].Username, Password: "<hidden>"})
+		}
+
+		return c.JSON(http.StatusOK, usersData)
 	})
 
 	e.Logger.Fatal(e.Start(":3000"))
@@ -191,7 +233,7 @@ func SaveDataToFile(users []User) error {
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
