@@ -133,11 +133,13 @@ func main() {
 				if err != nil {
 					return err
 				}
+
 				sess.Options = &sessions.Options{
 					Path:     "/",
 					MaxAge:   86400 * 7,
 					HttpOnly: true,
 				}
+
 				sess.Values["username"] = user.Username
 				if err := sess.Save(c.Request(), c.Response()); err != nil {
 					return err
@@ -171,8 +173,7 @@ func main() {
 		return c.String(http.StatusOK, "Logout successfully")
 	})
 
-	// define route to get all users (protected by session)
-	e.GET("/users", func(c echo.Context) error {
+	e.GET("/protected", func(c echo.Context) error {
 		sess, err := session.Get("session", c)
 		if err != nil {
 			return err
@@ -180,15 +181,14 @@ func main() {
 
 		username := sess.Values["username"]
 		if username == nil {
-			return c.String(http.StatusBadRequest, "Unauthorized")
+			return c.String(http.StatusBadRequest, "This is protected, please login first")
 		}
 
-		var usersData []User
-		for i := 0; i < len(users); i++ {
-			usersData = append(usersData, User{Username: users[i].Username, Password: "<hidden>"})
-		}
+		return c.JSON(http.StatusOK, fmt.Sprintf("Welcome %s to protected", username))
+	})
 
-		return c.JSON(http.StatusOK, usersData)
+	e.GET("/unprotected", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Welcome to unprotected")
 	})
 
 	e.Logger.Fatal(e.Start(":3000"))
