@@ -1,2 +1,0 @@
-{"username":"user1","password":"pass1","confirmPassword":"pass1"}
-{"username":"user4","password":"pass1","confirmPassword":"pass1"}

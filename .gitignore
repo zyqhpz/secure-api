@@ -1,1 +1,5 @@
-py/__pycache__/main.cpython-310.pyc
+*/__pycache__/
+
+*/tmp
+*.json
+*.exe

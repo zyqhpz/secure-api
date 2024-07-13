@@ -1,1 +1,0 @@
-{"string": {"username": "string", "full_name": "string", "password": null, "disabled": false, "hashed_password": "$2b$12$fdZ2AFWMMGMnxEU5BO2lVOS1Sms4x4tHy5RL1PwCZ2oc3LXDaJ62e"}, "test": {"username": "test", "full_name": "test123", "password": null, "disabled": true, "hashed_password": "$2b$12$YGHUgKGlb8UZIZyiYdrfguxi6gRufX0a30znDJTDByzJohhBYDLfa"}}
