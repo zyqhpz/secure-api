@@ -136,7 +136,7 @@ func main() {
 
 				sess.Options = &sessions.Options{
 					Path:     "/",
-					MaxAge:   86400 * 7,
+					MaxAge:   60,
 					HttpOnly: true,
 				}
 
@@ -182,6 +182,11 @@ func main() {
 		username := sess.Values["username"]
 		if username == nil {
 			return c.String(http.StatusBadRequest, "This is protected, please login first")
+		}
+
+		sess.Options.MaxAge = 60
+		if err := sess.Save(c.Request(), c.Response()); err != nil {
+			return err
 		}
 
 		return c.JSON(http.StatusOK, fmt.Sprintf("Welcome %s to protected", username))
